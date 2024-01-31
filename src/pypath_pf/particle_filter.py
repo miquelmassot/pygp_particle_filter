@@ -17,9 +17,16 @@ class ParticleFilter:
         for p in self.particles:
             p.predict(control)
 
-    def add_observation(self, range, bearing):
+    def add_observations(self, new_observations_rb):
+        """Adds new observations to the particle filter.
+
+        Parameters
+        ----------
+        new_observations_rb : np.ndarray
+            Array containing (range, bearing) for all measurements.
+        """
         for p in self.particles:
-            p.add_observation(range, bearing)
+            p.add_observations(new_observations_rb)
 
     def weights_normalisation(self):
         sum = 0.0
@@ -51,7 +58,7 @@ class ParticleFilter:
         else:
             self.weights_normalisation()
 
-    def observation_update(self, lidar_observations, observation_std, length_scale):
+    def observation_update(self, new_observations_rb, observation_std, length_scale):
         """
         Update particle weights based on lidar observations.
 
@@ -59,30 +66,16 @@ class ParticleFilter:
             lidar_observations: list of [range, bearing] observations
         """
         for particle in self.particles:
-            particle.weight *= np.mean(
-                weight_observation(
-                    particle.observations,
-                    lidar_observations,
-                    particle.x,
-                    particle.y,
-                    particle.gamma,
-                    particle.fov,
-                    particle.range,
-                    observation_std,
-                    length_scale,
-                )
+            particle.weight *= weight_observation(
+                particle.observations_rangeangle,
+                new_observations_rb,
+                particle.fov,
+                particle.range,
+                observation_std,
+                length_scale,
             )
+            particle.add_observations(new_observations_rb)
         self.resampling()
-
-    def data_association(self, particle, range, bearing):
-        """
-        For a particle, compute likelihood of correspondence for all observations.
-        Choose observation according to ML (Maximum Likelihood).
-
-        returns the observation index of the ML observation
-        """
-        # TODO
-        return 0
 
     @property
     def weights(self):

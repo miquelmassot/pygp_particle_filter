@@ -1,4 +1,5 @@
 import numpy as np
+from .tools import loc_to_rangeangle, rangeangle_to_loc
 
 
 class Particle:
@@ -50,10 +51,16 @@ class Particle:
         # (in meters or rad).
         self.motion_noise = motion_noise
 
-    def add_observation(self, range, bearing):
-        obs_x = self.x + range * np.cos(self.gamma + bearing)
-        obs_y = self.y + range * np.sin(self.gamma + bearing)
-        self.observations.append(np.array([obs_x, obs_y]))
+    def add_observations(self, new_observations_rb):
+        """Adds new observations to the particle
+
+        Parameters
+        ----------
+        new_observations_rb : np.ndarray
+            Array containing (range, bearing) for all measurements.
+        """
+        for obs in new_observations_rb:
+            self.observations.append(rangeangle_to_loc(self.pose, obs))
 
     def initialise(self):
         # Apply Gaussian noise to the robot state
@@ -100,3 +107,11 @@ class Particle:
         self.x = pose[0]
         self.y = pose[1]
         self.gamma = pose[2]
+
+    @property
+    def observations_rangeangle(self):
+        """Returns past observations in the robot frame as (range, bearing)."""
+        rangeangles = []
+        for obs in self.observations:
+            rangeangles.append(loc_to_rangeangle(self.pose, obs))
+        return rangeangles
