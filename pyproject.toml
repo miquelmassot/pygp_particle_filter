@@ -6,7 +6,37 @@ authors = [{ name = "Miquel Massot", email = "miquel.massot@gmail.com" }]
 dependencies = ["numpy>=1.24.4", "scikit-learn>=1.3.2", "matplotlib>=3.7.4"]
 requires-python = ">=3.8,<3.12"
 readme = "README.md"
-license = "GPL-3.0-or-later"
+license = { text = "GPL-3.0-or-later" }
+keywords = [
+    "Particle Filter",
+    "Particle",
+    "GP",
+    "Lidar",
+    "Gaussian Processes",
+    "SLAM",
+    "Localisation",
+    "Robotics",
+]
+classifiers = [
+    # How mature is this project? Common values are
+    #   3 - Alpha
+    #   4 - Beta
+    #   5 - Production/Stable
+    "Development Status :: 4 - Beta",
+    # Indicate who your project is intended for.
+    "Intended Audience :: Education",
+    # License
+    "OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    # Specify the Python versions you support here.
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+
+    # Topics
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 
 [tool.pdm]

@@ -2,11 +2,20 @@ import copy
 import numpy as np
 
 from .particle import Particle
-from .tools import weight_observation
+from .observation import weight_observation
 
 
 class ParticleFilter:
     def __init__(self, num_particles, motion_noise=[0.01, 0.01, 0.01, 0.01, 0.01]):
+        """Constructor for the particle filter.
+
+        Parameters
+        ----------
+        num_particles : int
+            Number of particles.
+        motion_noise : list, optional
+            Motion noise as (x, y, gamma, v, w), by default [0.01, 0.01, 0.01, 0.01, 0.01]
+        """
         self.num_particles = num_particles
         self.particles = []
         for _ in range(num_particles):
@@ -14,6 +23,13 @@ class ParticleFilter:
             self.particles.append(p)
 
     def predict(self, control):
+        """Prediction step of the particle filter.
+
+        Parameters
+        ----------
+        control: np.ndarray
+            control input U_t as [timestamp, v_t, w_t]
+        """
         for p in self.particles:
             p.predict(control)
 
@@ -29,6 +45,7 @@ class ParticleFilter:
             p.add_observations(new_observations_rb)
 
     def weights_normalisation(self):
+        """Normalise the particle weights so that they sum to 1.0."""
         sum = 0.0
         for p in self.particles:
             sum += p.weight
@@ -38,6 +55,7 @@ class ParticleFilter:
         self.weights /= sum
 
     def importance_sampling(self):
+        """Perform importance sampling."""
         new_indexes = np.random.choice(
             len(self.particles), len(self.particles), replace=True, p=self.weights
         )
@@ -47,12 +65,14 @@ class ParticleFilter:
         self.particles = new_particles
 
     def number_effective_particles(self):
+        """Calculate the number of effective particles."""
         sum = 0.0
         for p in self.particles:
             sum += p.weight**2
         return 1.0 / sum
 
     def resampling(self):
+        """Resampling step of the particle filter only if the number of effective particles is less than half of the total number of particles."""
         if self.number_effective_particles() < self.num_particles / 2:
             self.importance_sampling()
         else:
@@ -65,6 +85,8 @@ class ParticleFilter:
         Input:
             lidar_observations: list of [range, bearing] observations
         """
+        if len(new_observations_rb) == 0:
+            return
         for particle in self.particles:
             particle.weight *= weight_observation(
                 particle.observations_rangeangle,
@@ -79,14 +101,26 @@ class ParticleFilter:
 
     @property
     def weights(self):
+        """Returns the weights of the particles."""
         w = []
         if len(self.particles) == 0:
             return w
         for p in self.particles:
             w.append(p.weight)
+        w = np.array(w)
         return w
 
     @weights.setter
     def weights(self, new_weights):
         for i in range(len(self.particles)):
             self.particles[i].weight = new_weights[i]
+
+    @property
+    def mean_pose(self):
+        """Returns the mean state of the particles."""
+        mean_pose = np.zeros(3)
+        if len(self.particles) == 0:
+            return mean_pose
+        for p in self.particles:
+            mean_pose += p.weight * p.pose
+        return mean_pose

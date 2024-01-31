@@ -16,6 +16,11 @@ def loc_to_rangeangle(robot_pose, landmark_loc):
     numpy array
         The range and bearing as (range, bearing).
     """
+    if len(landmark_loc) == 0:
+        return np.array([])
+    if len(robot_pose) == 0:
+        print("Warning: robot pose is empty in loc_to_rangeangle()")
+        return np.array([])
     # Get the robot pose
     robot_x = robot_pose[0]
     robot_y = robot_pose[1]

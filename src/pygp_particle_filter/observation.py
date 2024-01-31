@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn import gaussian_process
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel, ConstantKernel
 
@@ -7,9 +6,6 @@ from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning
 
 simplefilter("ignore", category=ConvergenceWarning)
-
-
-from .tools import points_in_frustum, world_to_robot
 
 
 def weight_observation(
@@ -39,6 +35,12 @@ def weight_observation(
     matern_length_scale : float
         The length scale of the Matern kernel.
     """
+    # Do not run on an empty past observations array
+    if past_observations_rb is None:
+        return 1.0
+    if len(past_observations_rb) == 0:
+        return 1.0
+
     # filter the past observations and keep only the ones within fov and range
     past_observations_rb_in_range = past_observations_rb[
         past_observations_rb[:, 0] < robot_range
@@ -46,6 +48,10 @@ def weight_observation(
     past_observations_rb_in_fov = past_observations_rb_in_range[
         np.abs(past_observations_rb_in_range[:, 1]) < robot_fov / 2
     ]
+
+    # Do not run on an empty array
+    if len(past_observations_rb_in_fov) < 5:
+        return 1.0
 
     # Train the GP model with the past observations. Note that X and Y are swapped.
     obs_bearing = np.array(past_observations_rb_in_fov)[:, 1].reshape(-1, 1)
@@ -78,4 +84,5 @@ def weight_observation(
         -0.5 * (mean_range_prediction - new_obs_range) ** 2 / sum_squared_stds
     ) / np.sqrt(2 * np.pi * sum_squared_stds)
     mean_weight = np.mean(weight)
+    print(mean_weight)
     return mean_weight
