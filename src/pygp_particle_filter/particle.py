@@ -104,9 +104,9 @@ class Particle:
 
         # Compute updated [timestamp, x, y, gamma]
         self.timestamp = control[0]
-        self.x += (control[1] + v) * np.cos(self.gamma) * delta_t
-        self.y += (control[1] + v) * np.sin(self.gamma) * delta_t
-        self.gamma += (control[2] + w) * delta_t
+        self.x += v * np.cos(self.gamma) * delta_t
+        self.y += v * np.sin(self.gamma) * delta_t
+        self.gamma += w * delta_t
 
         robot_path = np.array([[self.timestamp, self.x, self.y, self.gamma]])
 

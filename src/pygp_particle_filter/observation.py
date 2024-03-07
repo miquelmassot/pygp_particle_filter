@@ -59,11 +59,13 @@ def weight_observation(
     mean_obs_range = np.mean(obs_range)
     kernel = (
         ConstantKernel(mean_obs_range)
-        + Matern(length_scale=matern_length_scale, nu=3 / 2)
+        + Matern(
+            length_scale=matern_length_scale, nu=3 / 2, length_scale_bounds="fixed"
+        )
         + WhiteKernel(noise_level=observation_std**2)
     )
     gp = gaussian_process.GaussianProcessRegressor(
-        kernel=kernel, alpha=observation_std**2, n_restarts_optimizer=10
+        kernel=kernel, alpha=observation_std**2, n_restarts_optimizer=0
     )
     gp.fit(obs_bearing, obs_range)
 
