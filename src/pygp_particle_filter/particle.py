@@ -85,7 +85,7 @@ class Particle:
         self.x = np.random.normal(self.x, self.motion_noise[0])
         self.y = np.random.normal(self.y, self.motion_noise[1])
         self.gamma = np.random.normal(self.gamma, self.motion_noise[2]) % (2 * np.pi)
-        self.path = np.array([[self.timestamp, self.x, self.y, self.gamma]])
+        self.path = [[self.timestamp, self.x, self.y, self.gamma]]
 
     def predict(self, control):
         """
@@ -108,12 +108,12 @@ class Particle:
         self.y += v * np.sin(self.gamma) * delta_t
         self.gamma += w * delta_t
 
-        robot_path = np.array([[self.timestamp, self.x, self.y, self.gamma]])
+        robot_path = [self.timestamp, self.x, self.y, self.gamma]
 
         if self.path is None:
-            self.path = robot_path
+            self.path = [robot_path]
         else:
-            self.path = np.append(self.path, robot_path, axis=1)
+            self.path.append(robot_path)
 
         # Limit θ within [0, 2*np.pi]
         self.gamma = self.gamma % (2 * np.pi)
