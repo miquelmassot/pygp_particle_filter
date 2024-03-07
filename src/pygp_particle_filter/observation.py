@@ -83,6 +83,7 @@ def weight_observation(
     weight = np.exp(
         -0.5 * (mean_range_prediction - new_obs_range) ** 2 / sum_squared_stds
     ) / np.sqrt(2 * np.pi * sum_squared_stds)
+    # Normalise the weight
+    weight /= len(weight)  # HACK
     mean_weight = np.mean(weight)
-    print(mean_weight)
     return mean_weight

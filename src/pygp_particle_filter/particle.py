@@ -18,10 +18,10 @@ class Particle:
 
     def __init__(
         self,
-        t0=0.0,
-        x0=0.0,
-        y0=0.0,
-        gamma0=0.0,
+        t=0.0,
+        x=0.0,
+        y=0.0,
+        gamma=0.0,
         num_particles=1,
         motion_noise=[0.01, 0.01, 0.01, 0.01, 0.01],
         fov=np.pi * 2 / 3,
@@ -31,13 +31,13 @@ class Particle:
 
         Parameters
         ----------
-        t0 : float, optional
+        t : float, optional
             Starting timestamp in seconds, by default 0.0
-        x0 : float, optional
+        x : float, optional
             Starting x position in meters, by default 0.0
-        y0 : float, optional
+        y : float, optional
             Starting y position in meters, by default 0.0
-        gamma0 : float, optional
+        gamma : float, optional
             Starting orientation in radians, by default 0.0
         num_particles : int, optional
             The number of particles, by default 1
@@ -45,10 +45,10 @@ class Particle:
             Motion model noise as a list for x, y, gamma, x dot, gamma dot, by default [0.01, 0.01, 0.01, 0.01, 0.01]
         """
         # Robot state: [timestamp, x, y, gamma]
-        self.timestamp = t0
-        self.x = x0
-        self.y = y0
-        self.gamma = gamma0
+        self.timestamp = t
+        self.x = x
+        self.y = y
+        self.gamma = gamma % (2 * np.pi)
         self.fov = fov
         self.range = range
         # Weight
@@ -84,7 +84,7 @@ class Particle:
         # Apply Gaussian noise to the robot state
         self.x = np.random.normal(self.x, self.motion_noise[0])
         self.y = np.random.normal(self.y, self.motion_noise[1])
-        self.gamma = np.random.normal(self.gamma, self.motion_noise[2])
+        self.gamma = np.random.normal(self.gamma, self.motion_noise[2]) % (2 * np.pi)
         self.path = np.array([[self.timestamp, self.x, self.y, self.gamma]])
 
     def predict(self, control):
@@ -115,11 +115,8 @@ class Particle:
         else:
             self.path = np.append(self.path, robot_path, axis=1)
 
-        # Limit θ within [-pi, pi]
-        if self.gamma > np.pi:
-            self.gamma -= 2 * np.pi
-        elif self.gamma < -np.pi:
-            self.gamma += 2 * np.pi
+        # Limit θ within [0, 2*np.pi]
+        self.gamma = self.gamma % (2 * np.pi)
 
     @property
     def pose(self):
@@ -129,7 +126,7 @@ class Particle:
     def pose(self, pose):
         self.x = pose[0]
         self.y = pose[1]
-        self.gamma = pose[2]
+        self.gamma = pose[2] % (2 * np.pi)
 
     @property
     def observations_rangeangle(self):

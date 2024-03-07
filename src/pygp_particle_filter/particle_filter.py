@@ -6,20 +6,42 @@ from .observation import weight_observation
 
 
 class ParticleFilter:
-    def __init__(self, num_particles, motion_noise=[0.01, 0.01, 0.01, 0.01, 0.01]):
+    def __init__(
+        self,
+        num_particles,
+        x_range=[-1.0, 1.0],
+        y_range=[-1.0, 1.0],
+        gamma_range=[-np.pi, np.pi],
+        motion_noise=[0.01, 0.01, 0.01, 0.01, 0.01],
+    ):
         """Constructor for the particle filter.
 
         Parameters
         ----------
         num_particles : int
             Number of particles.
+        x_range : list, optional
+            Range of x values, by default [-1.0, 1.0]
+        y_range : list, optional
+            Range of y values, by default [-1.0, 1.0]
+        gamma_range : list, optional
+            Range of gamma values, by default [-np.pi, np.pi]
         motion_noise : list, optional
             Motion noise as (x, y, gamma, v, w), by default [0.01, 0.01, 0.01, 0.01, 0.01]
         """
         self.num_particles = num_particles
         self.particles = []
         for _ in range(num_particles):
-            p = Particle(num_particles=num_particles, motion_noise=motion_noise)
+            x = np.random.uniform(x_range[0], x_range[1])
+            y = np.random.uniform(y_range[0], y_range[1])
+            gamma = np.random.uniform(gamma_range[0], gamma_range[1])
+            p = Particle(
+                x=x,
+                y=y,
+                gamma=gamma,
+                num_particles=num_particles,
+                motion_noise=motion_noise,
+            )
             self.particles.append(p)
 
     def predict(self, control):
@@ -73,10 +95,11 @@ class ParticleFilter:
 
     def resampling(self):
         """Resampling step of the particle filter only if the number of effective particles is less than half of the total number of particles."""
+        print("Number of effective particles: ", self.number_effective_particles())
         if self.number_effective_particles() < self.num_particles / 2:
+            print("Resampling")
             self.importance_sampling()
-        else:
-            self.weights_normalisation()
+        self.weights_normalisation()
 
     def observation_update(self, new_observations_rb, observation_std, length_scale):
         """
@@ -97,6 +120,7 @@ class ParticleFilter:
                 length_scale,
             )
             particle.add_observations(new_observations_rb)
+        self.weights_normalisation()
         self.resampling()
 
     @property
