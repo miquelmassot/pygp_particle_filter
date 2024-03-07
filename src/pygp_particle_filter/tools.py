@@ -52,10 +52,10 @@ def rangeangle_to_loc(robot_pose, rangeangle):
     # Get the robot pose
     robot_x = robot_pose[0]
     robot_y = robot_pose[1]
-    robot_gamma = robot_pose[2]
+    robot_gamma = robot_pose[2] % (2 * np.pi)
     # Get the range and bearing
     range = rangeangle[0]
-    bearing = rangeangle[1]
+    bearing = rangeangle[1] % (2 * np.pi)
     # Calculate the landmark location
     landmark_x = robot_x + range * np.cos(bearing + robot_gamma)
     landmark_y = robot_y + range * np.sin(bearing + robot_gamma)

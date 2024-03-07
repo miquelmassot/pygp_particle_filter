@@ -1,6 +1,6 @@
 [project]
 name = "pygp_particle_filter"
-version = "0.1.2"
+version = "0.1.3"
 description = "Particle Filter implementation for 2D lidar using Gaussian Processes"
 authors = [{ name = "Miquel Massot", email = "miquel.massot@gmail.com" }]
 dependencies = ["numpy>=1.24.4", "scikit-learn>=1.3.2", "matplotlib>=3.7.4"]
