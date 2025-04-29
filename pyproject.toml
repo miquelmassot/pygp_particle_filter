@@ -1,8 +1,9 @@
 [project]
 name = "pygp_particle_filter"
-version = "0.1.3"
+version = "0.1.4"
 description = "Particle Filter implementation for 2D lidar using Gaussian Processes"
-authors = [{ name = "Miquel Massot", email = "miquel.massot@gmail.com" }]
+authors = [{ name = "Miquel Massot", email = "miquel.massot@gmail.com" }, { name = "Blair Thornton", email = "b.thornton@soton.ac.uk" }]
+
 dependencies = ["numpy>=1.24.4", "scikit-learn>=1.3.2", "matplotlib>=3.7.4"]
 requires-python = ">=3.8,<3.12"
 readme = "README.md"

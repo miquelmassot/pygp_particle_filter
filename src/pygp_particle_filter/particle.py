@@ -1,6 +1,5 @@
 import numpy as np
-from .tools import loc_to_rangeangle, rangeangle_to_loc
-
+from .tools import loc_to_rangeangle, rangeangle_to_loc, polar_to_cartesian
 
 class Particle:
     __slots__ = (
@@ -13,7 +12,8 @@ class Particle:
         "weight",
         "observations",
         "path",
-        "motion_noise",
+        "jitter",
+        "auxilliary_noise",
     )
 
     def __init__(
@@ -23,7 +23,8 @@ class Particle:
         y=0.0,
         gamma=0.0,
         num_particles=1,
-        motion_noise=[0.01, 0.01, 0.01, 0.01, 0.01],
+        jitter=0.1,
+        auxilliary_noise=[0.01, 0.01, 0.01, 0.01, 0.01],
         fov=np.pi * 2 / 3,
         range=2.0,
     ):
@@ -41,8 +42,10 @@ class Particle:
             Starting orientation in radians, by default 0.0
         num_particles : int, optional
             The number of particles, by default 1
-        motion_noise : list, optional
-            Motion model noise as a list for x, y, gamma, x dot, gamma dot, by default [0.01, 0.01, 0.01, 0.01, 0.01]
+        jitter : float, optional 
+            jitter added to particles after resampling (also called innovation)
+        auxilliary_noise : list, optional
+            Auxilliary noise as a list for x, y, gamma, x dot, gamma dot, by default [0.01, 0.01, 0.01, 0.01, 0.01]
         """
         # Robot state: [timestamp, x, y, gamma]
         self.timestamp = t
@@ -58,9 +61,10 @@ class Particle:
         self.path = None
 
         # Noises
-        # motion_noise: [noise_x, noise_y, noise_gamma, noise_v, noise_w]
+        # auxilliary_noise: [noise_x, noise_y, noise_gamma, noise_v, noise_w]
         # (in meters or rad).
-        self.motion_noise = motion_noise
+        self.jitter = jitter
+        self.auxilliary_noise = auxilliary_noise
 
         # Apply Gaussian noise to the robot state
         self.initialise()
@@ -82,9 +86,16 @@ class Particle:
 
     def initialise(self):
         # Apply Gaussian noise to the robot state
-        self.x = np.random.normal(self.x, self.motion_noise[0])
-        self.y = np.random.normal(self.y, self.motion_noise[1])
-        self.gamma = np.random.normal(self.gamma, self.motion_noise[2]) % (2 * np.pi)
+
+        theta = np.random.uniform(0, np.deg2rad(360))
+        r = np.sqrt(np.random.uniform(0, 1))
+
+        x_std, y_std = polar_to_cartesian(r,theta)           
+        
+        self.x = self.x + x_std*self.auxilliary_noise[0]
+        self.y = self.y + y_std*self.auxilliary_noise[1]
+        self.gamma = np.random.normal(self.gamma, self.auxilliary_noise[2]) % (2 * np.pi)
+
         self.path = [[self.timestamp, self.x, self.y, self.gamma]]
 
     def predict(self, control):
@@ -97,8 +108,8 @@ class Particle:
                      [timestamp, v_t, w_t]
         """
         # Apply Gaussian noise to control input
-        v = np.random.normal(control[1], self.motion_noise[3])
-        w = np.random.normal(control[2], self.motion_noise[4])
+        v = np.random.normal(control[1], self.auxilliary_noise[3])
+        w = np.random.normal(control[2], self.auxilliary_noise[4])
 
         delta_t = control[0] - self.timestamp
 
@@ -106,7 +117,10 @@ class Particle:
         self.timestamp = control[0]
         self.x += v * np.cos(self.gamma) * delta_t
         self.y += v * np.sin(self.gamma) * delta_t
-        self.gamma += w * delta_t
+        self.gamma += w * delta_t 
+
+        # Limit θ within [0, 2*np.pi]
+        self.gamma = self.gamma % (2 * np.pi)
 
         robot_path = [self.timestamp, self.x, self.y, self.gamma]
 
@@ -115,8 +129,6 @@ class Particle:
         else:
             self.path.append(robot_path)
 
-        # Limit θ within [0, 2*np.pi]
-        self.gamma = self.gamma % (2 * np.pi)
 
     @property
     def pose(self):

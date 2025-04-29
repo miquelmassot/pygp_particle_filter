@@ -5,17 +5,18 @@ from sklearn.neighbors import KernelDensity
 
 from .particle import Particle
 from .observation import weight_observation
-from .tools import rangeangle_to_loc
+from .tools import rangeangle_to_loc, polar_to_cartesian, wrapped_mean
 
 
 class ParticleFilter:
     def __init__(
         self,
         num_particles,
-        x_range=[-1.0, 1.0],
-        y_range=[-1.0, 1.0],
-        gamma_range=[-np.pi, np.pi],
-        motion_noise=[0.01, 0.01, 0.01, 0.01, 0.01],
+        x_init=0,
+        y_init=0,
+        gamma_init=0,
+        jitter=0.1,
+        auxilliary_noise=[0.01, 0.01, 0.01, 0.01, 0.01],
     ):
         """Constructor for the particle filter.
 
@@ -29,22 +30,32 @@ class ParticleFilter:
             Range of y values, by default [-1.0, 1.0]
         gamma_range : list, optional
             Range of gamma values, by default [-np.pi, np.pi]
-        motion_noise : list, optional
+        jitter : float, optional 
+            jitter added to particles after resampling (also called innovation)
+        auxilliary_noise : list, optional
             Motion noise as (x, y, gamma, v, w), by default [0.01, 0.01, 0.01, 0.01, 0.01]
         """
         self.num_particles = num_particles
         self.particles = []
-        self.observations_rb = None
+        self.observations_rb = None        
         for _ in range(num_particles):
-            x = np.random.uniform(x_range[0], x_range[1])
-            y = np.random.uniform(y_range[0], y_range[1])
-            gamma = np.random.uniform(gamma_range[0], gamma_range[1])
+
+            # theta = np.random.uniform(0, np.deg2rad(360))
+            # r = np.sqrt(np.random.uniform(0, 1))
+
+            # x_std, y_std = polar_to_cartesian(r,theta)           
+        
+            # x = x_init + x_std*self.auxilliary_noise[0]
+            # y = y_init + y_std*self.auxilliary_noise[1]
+            # gamma = np.random.normal(self.gamma_init, self.auxilliary_noise[2]) % (2 * np.pi)
+
             p = Particle(
-                x=x,
-                y=y,
-                gamma=gamma,
+                x=x_init,
+                y=y_init,
+                gamma=gamma_init % (2 * np.pi),
                 num_particles=num_particles,
-                motion_noise=motion_noise,
+                jitter=jitter,
+                auxilliary_noise=auxilliary_noise,
             )
             self.particles.append(p)
 
@@ -86,15 +97,28 @@ class ParticleFilter:
             self.weights = [1.0 / num_p] * num_p
         self.weights /= sum
 
+
     def importance_sampling(self):
         """Perform importance sampling."""
         new_indexes = np.random.choice(
             len(self.particles), len(self.particles), replace=True, p=self.weights
         )
+
         new_particles = []
+        
         for index in new_indexes:
             new_particles.append(copy.deepcopy(self.particles[index]))
         self.particles = new_particles
+        
+        for p in self.particles:            
+            theta = np.random.uniform(0, np.deg2rad(360))            
+            r = np.sqrt(np.random.uniform(0, 1)) * p.jitter
+        
+            x_std, y_std = polar_to_cartesian(r,theta)           
+        
+            p.x = p.x + x_std
+            p.y = p.y + y_std
+            p.gamma = np.random.normal(p.gamma, p.auxilliary_noise[2]) % (2 * np.pi)
 
     def number_effective_particles(self):
         """Calculate the number of effective particles."""
@@ -195,41 +219,34 @@ class ParticleFilter:
 
     def kde_pose(self, sigma_resolution=0.1, sampling_resolution=1000):
         """Returns the pose of the KDE of the particles."""
-        kde_poses = []
-        for i in range(len(self.particles[0].path)):
-            x = np.array([p.path[i][1] for p in self.particles]).squeeze()
-            y = np.array([p.path[i][2] for p in self.particles]).squeeze()
-            gamma = np.array([p.path[i][3] for p in self.particles]).squeeze()
-            locations = np.vstack([x, y, gamma])
-            kde = KernelDensity(kernel="gaussian", bandwidth=sigma_resolution).fit(
-                locations.T, sample_weight=self.weights.T
-            )
-            state_range_x = np.linspace(
-                min(x),
-                max(x),
-                num=sampling_resolution,
-            )
-            state_range_y = np.linspace(
-                min(y),
-                max(y),
-                num=sampling_resolution,
-            )
-            state_range_gamma = np.linspace(
-                min(gamma),
-                max(gamma),
-                num=sampling_resolution,
-            )
-            state_range = np.vstack([state_range_x, state_range_y, state_range_gamma])
-            density = kde.score_samples(state_range.T)
-            est_x, est_y, est_gamma = state_range.T[density.argmax()]
-            res = np.array([est_x, est_y, est_gamma])
-            kde_poses.append(res)
-        return np.array(kde_poses)
+        kde_pose = np.array([np.nan, np.nan, np.nan])
+        kde_std = np.array([np.nan, np.nan])
+            
+        x = np.array([p.pose[0] for p in self.particles])
+        y = np.array([p.pose[1] for p in self.particles])
+        gamma = np.array([p.pose[2] for p in self.particles])
 
-    def kde_observations(self, sigma_resolution=0.1, sampling_resolution=1000):
-        poses = self.kde_pose(sigma_resolution, sampling_resolution)
-        kde_obs = []
-        for obs, pose in zip(self.observations_rb, poses):
-            obs_xy = rangeangle_to_loc(pose, obs)
-            kde_obs.append(obs_xy)
-        return np.array(kde_obs)
+            
+        locations = np.vstack([x, y])
+        kde = KernelDensity(kernel="gaussian", bandwidth=sigma_resolution).fit(
+            locations.T, sample_weight=self.weights.T
+        )
+
+        eps = 1e-6
+        state_range_x = np.linspace(x.min() - eps, x.max() + eps, num=sampling_resolution)
+        state_range_y = np.linspace(y.min() - eps, y.max() + eps, num=sampling_resolution)
+            
+        est_gamma = wrapped_mean(gamma)
+            
+        state_range = np.vstack([state_range_x, state_range_y])
+        density = kde.score_samples(state_range.T)
+        est_x, est_y = state_range.T[density.argmax()]
+            
+        kde_pose[0] = est_x
+        kde_pose[1] = est_y
+        kde_pose[2] = est_gamma % (2*np.pi)
+
+        kde_std[0] = np.std(x)
+        kde_std[1] = np.std(y)
+
+        return np.array(kde_pose), np.array(kde_std)

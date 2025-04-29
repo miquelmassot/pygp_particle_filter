@@ -15,6 +15,7 @@ def weight_observation(
     robot_range,
     observation_std,
     matern_length_scale,
+    gpr_sample_cap = 20,
 ):
     """Weight the new observation based on the past observations.
 
@@ -56,6 +57,15 @@ def weight_observation(
     # Train the GP model with the past observations. Note that X and Y are swapped.
     obs_bearing = np.array(past_observations_rb_in_fov)[:, 1].reshape(-1, 1)
     obs_range = np.array(past_observations_rb_in_fov)[:, 0].reshape(-1, 1)
+
+    # restrict the number of samples to use to train the GPR
+    i = list(range(len(obs_bearing)))
+        
+    if len(obs_bearing) > gpr_sample_cap:
+        j = np.random.choice(i,size = gpr_sample_cap, replace=False)
+        obs_bearing = obs_bearing[j]
+        obs_range = obs_range[j]
+
     mean_obs_range = np.mean(obs_range)
     kernel = (
         ConstantKernel(mean_obs_range)
@@ -83,7 +93,7 @@ def weight_observation(
 
     # Calculate the weight
     weight = np.exp(
-        -0.5 * (mean_range_prediction - new_obs_range) ** 2 / sum_squared_stds
+        -1 * (mean_range_prediction - new_obs_range) ** 2 / sum_squared_stds
     ) / np.sqrt(2 * np.pi * sum_squared_stds)
     # Normalise the weight
     weight /= len(weight)  # HACK
