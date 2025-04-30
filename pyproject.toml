@@ -1,6 +1,6 @@
 [project]
 name = "pygp_particle_filter"
-version = "0.1.5"
+version = "0.1.7"
 description = "Particle Filter implementation for 2D lidar using Gaussian Processes"
 authors = [{ name = "Miquel Massot", email = "miquel.massot@gmail.com" }, { name = "Blair Thornton", email = "b.thornton@soton.ac.uk" }]
 
