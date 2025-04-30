@@ -4,7 +4,7 @@ This is a particle-path SLAM implementation that uses Gaussian Process Regressio
 
 >pip install pygp-particle-filter
 
-or alternatively clone the git repository at `https://github.com/ocean-perception/pygp_particle_filter`, and install the packages with the following command from its root directory. 
+or alternatively clone the git repository at `https://github.com/miquelmassot/pygp_particle_filter`, and install the packages with the following command from its root directory. 
 
 >pip install -e .
 
