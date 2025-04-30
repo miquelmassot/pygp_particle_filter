@@ -10,4 +10,5 @@ or alternatively clone the git repository at `https://github.com/miquelmassot/py
 
 The example jupyter notebook illustrates basic usage. 
 
+
 The approach is explained in the University of Southampton `FEEG6043: Intelligent Mobile Robotics` module notes and associated tutorials.
